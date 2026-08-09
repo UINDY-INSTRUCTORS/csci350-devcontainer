@@ -1,0 +1,25 @@
+// Authoring container for the image itself — builds from the Dockerfile so
+// the toolchain can be edited and smoke-tested locally.
+//
+// Assignment templates do NOT use this file. They pull the published image;
+// see template/devcontainer.json.
+{
+  "name": "CSCI-350 toolchain (build)",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "evzen-wybitul.magic-racket",
+        "haskell.haskell",
+        "arthurwang.vsc-prolog",
+        "mattn.Lisp",
+        "ms-python.python"
+      ]
+    }
+  },
+  "postCreateCommand": "smoke-test"
+}

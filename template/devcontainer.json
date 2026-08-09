@@ -1,0 +1,24 @@
+// Copy this to .devcontainer/devcontainer.json in each assignment template repo.
+//
+// It pulls the published image rather than building — codespace start is a
+// registry pull, not a 20-minute toolchain install.
+//
+// The tag is pinned deliberately: rebuilding :fa26 mid-term would otherwise
+// change the environment under live assignments. Publish :fa26b and bump
+// templates explicitly if the toolchain has to move during the term.
+{
+  "name": "CSCI-350",
+  "image": "ghcr.io/uindy-instructors/csci350:fa26",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "evzen-wybitul.magic-racket",
+        "haskell.haskell",
+        "arthurwang.vsc-prolog",
+        "mattn.Lisp",
+        "ms-python.python"
+      ]
+    }
+  }
+}

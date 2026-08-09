@@ -1,0 +1,7 @@
+*.class
+*.log
+.DS_Store
+dist-newstyle/
+.stack-work/
+compiled/
+__pycache__/
