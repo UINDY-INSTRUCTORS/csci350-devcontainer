@@ -28,6 +28,7 @@ def run_tier(name: str, repo: Path, timeout_s: int, seed: int) -> TierRun:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        errors="replace",
         start_new_session=True,
     )
 

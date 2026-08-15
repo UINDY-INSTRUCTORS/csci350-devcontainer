@@ -35,7 +35,11 @@ def main(argv: list[str] | None = None) -> int:
     for tier in manifest.tiers:
         try:
             runs.append(run_tier(tier, repo, manifest.timeout_for(tier), manifest.seed))
-        except OSError as exc:
+        except Exception as exc:
+            # A tier is untrusted student code; anything it does — including
+            # producing output that raises far from an OSError (e.g. a
+            # UnicodeDecodeError, which is a ValueError) — must still yield a
+            # written report with the level withheld, never a bare traceback.
             print(f"level: could not run tier {tier!r}: {exc}", file=sys.stderr)
             status = "error"
             break
