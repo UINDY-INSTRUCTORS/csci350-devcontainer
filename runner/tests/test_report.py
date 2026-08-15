@@ -35,6 +35,23 @@ def test_error_status_withholds_the_level():
     r = build_report(M, RUNS[:1], status="error")
     assert r["status"] == "error"
     assert "level" not in r
+    # Verify all tiers present in manifest order, with real and synthesized entries
+    assert len(r["tiers"]) == 4
+    assert [t["name"] for t in r["tiers"]] == ["smoke", "parse", "eval", "prop"]
+    # Real entry for smoke (passed in RUNS[:1])
+    assert r["tiers"][0]["result"] == "pass"
+    assert r["tiers"][0]["duration_s"] == 0.4
+    assert r["tiers"][0]["output"] == "ok"
+    # Synthesized skip entries for parse, eval, prop (not in RUNS[:1])
+    assert r["tiers"][1]["result"] == "skip"
+    assert r["tiers"][1]["duration_s"] == 0.0
+    assert r["tiers"][1]["output"] == ""
+    assert r["tiers"][2]["result"] == "skip"
+    assert r["tiers"][2]["duration_s"] == 0.0
+    assert r["tiers"][2]["output"] == ""
+    assert r["tiers"][3]["result"] == "skip"
+    assert r["tiers"][3]["duration_s"] == 0.0
+    assert r["tiers"][3]["output"] == ""
 
 def test_write_report_emits_valid_json(tmp_path: Path):
     out = tmp_path / "assessment.json"
