@@ -18,6 +18,10 @@ def test_writes_report_and_exits_zero(repo):
     data = json.loads((repo / "assessment.json").read_text())
     assert data["level"] == "E"
     assert data["status"] == "ok"
+    # End-to-end proof that cli.py threads manifest.seed to the tiers
+    # rather than a constant: the fixture Makefile's test-prop target
+    # echoes $LEVEL_SEED, and the fixture manifest's seed is 20260929.
+    assert "seed=20260929" in data["tiers"][3]["output"]
 
 def test_runs_every_tier_even_after_a_failure(repo):
     (repo / "FAIL_EVAL").touch()          # fixture Makefile fails test-eval when present
@@ -46,6 +50,20 @@ def test_tier_execution_failure_withholds_level(repo, monkeypatch, capsys):
     data = json.loads((repo / "assessment.json").read_text())
     assert data["status"] == "error"
     assert "level" not in data
+    err = capsys.readouterr().err
+    assert err.startswith("level:")
+    assert "Traceback" not in err
+
+def test_malformed_manifest_is_clean_exit_not_traceback(repo, capsys):
+    # An int-valued award (finding 3) used to crash inside
+    # load_manifest's `', '.join(bad)` with a TypeError instead of
+    # raising ManifestError. Prove the CLI layer converts any malformed-
+    # but-present manifest into a clean exit 1, never a traceback.
+    yml = repo / "assessment.yml"
+    text = yml.read_text().replace("awards: {smoke: U, parse: D, eval: S, prop: E}",
+                                    "awards: {smoke: 1, parse: D, eval: S, prop: E}")
+    yml.write_text(text)
+    assert main(["--repo", str(repo)]) == 1
     err = capsys.readouterr().err
     assert err.startswith("level:")
     assert "Traceback" not in err
