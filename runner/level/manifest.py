@@ -43,8 +43,19 @@ def load_manifest(path: Path) -> Manifest:
     if missing:
         raise ManifestError(f"{path} missing required key(s): {', '.join(missing)}")
 
-    tiers = tuple(raw["tiers"])
-    awards = dict(raw["awards"])
+    try:
+        if not isinstance(raw["tiers"], list):
+            raise TypeError(f"tiers must be a list, got {type(raw['tiers']).__name__}")
+        tiers = tuple(raw["tiers"])
+    except (TypeError, ValueError) as exc:
+        raise ManifestError(f"tiers: {exc}") from exc
+
+    try:
+        if not isinstance(raw["awards"], dict):
+            raise TypeError(f"awards must be a mapping, got {type(raw['awards']).__name__}")
+        awards = dict(raw["awards"])
+    except (TypeError, ValueError) as exc:
+        raise ManifestError(f"awards: {exc}") from exc
 
     unknown = [t for t in awards if t not in tiers]
     if unknown:
@@ -58,12 +69,33 @@ def load_manifest(path: Path) -> Manifest:
     if bad:
         raise ManifestError(f"not a valid level: {', '.join(bad)}")
 
+    try:
+        seed = int(raw["seed"])
+    except (TypeError, ValueError) as exc:
+        raise ManifestError(f"seed must be an integer: {exc}") from exc
+
+    try:
+        timeout_s = int(raw["timeout_s"])
+    except (TypeError, ValueError) as exc:
+        raise ManifestError(f"timeout_s must be an integer: {exc}") from exc
+
+    timeouts_dict = raw.get("timeouts") or {}
+    try:
+        timeouts = {}
+        for k, v in timeouts_dict.items():
+            try:
+                timeouts[str(k)] = int(v)
+            except (TypeError, ValueError) as exc:
+                raise ManifestError(f"timeouts[{k!r}] must be an integer: {exc}") from exc
+    except ManifestError:
+        raise
+
     return Manifest(
         standard=str(raw["standard"]),
-        seed=int(raw["seed"]),
+        seed=seed,
         floor=str(raw["floor"]),
         tiers=tiers,
         awards=awards,
-        timeout_s=int(raw["timeout_s"]),
-        timeouts={str(k): int(v) for k, v in (raw.get("timeouts") or {}).items()},
+        timeout_s=timeout_s,
+        timeouts=timeouts,
     )

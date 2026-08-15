@@ -51,3 +51,28 @@ def test_rejects_missing_required_key(tmp_path):
     bad = GOOD.replace("seed: 20260929\n", "")
     with pytest.raises(ManifestError, match="seed"):
         load_manifest(write(tmp_path, bad))
+
+def test_rejects_seed_not_integer(tmp_path):
+    bad = GOOD.replace("seed: 20260929", "seed: not_a_number")
+    with pytest.raises(ManifestError, match="seed"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_timeout_s_not_integer(tmp_path):
+    bad = GOOD.replace("timeout_s: 120", "timeout_s: invalid")
+    with pytest.raises(ManifestError, match="timeout_s"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_tiers_not_list(tmp_path):
+    bad = GOOD.replace("tiers:  [smoke, parse, eval, prop]", "tiers: smoke")
+    with pytest.raises(ManifestError, match="tiers"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_awards_not_mapping(tmp_path):
+    bad = GOOD.replace("awards: {smoke: U, parse: D, eval: S, prop: E}", "awards: [U, D, S, E]")
+    with pytest.raises(ManifestError, match="awards"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_timeout_value_not_integer(tmp_path):
+    bad = GOOD.replace("timeouts: {prop: 600}", "timeouts: {prop: not_a_number}")
+    with pytest.raises(ManifestError, match="timeouts"):
+        load_manifest(write(tmp_path, bad))
