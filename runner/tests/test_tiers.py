@@ -1,12 +1,13 @@
 import shutil
 import pytest
+import time
 from pathlib import Path
 from level.tiers import run_tier
 
 pytestmark = pytest.mark.skipif(shutil.which("make") is None, reason="make not installed")
 
 MAKEFILE = """\
-.PHONY: test-ok test-bad test-slow test-seed
+.PHONY: test-ok test-bad test-slow test-seed test-background
 test-ok:
 \t@echo tier ran
 test-bad:
@@ -15,6 +16,8 @@ test-slow:
 \t@sleep 5
 test-seed:
 \t@echo seed=$$LEVEL_SEED
+test-background:
+\t@sh -c 'while true; do echo x >> marker.txt; sleep 0.1; done'
 """
 
 @pytest.fixture
@@ -46,3 +49,19 @@ def test_seed_is_exported_to_the_tier(repo):
 def test_missing_target_is_fail_not_crash(repo):
     run = run_tier("nosuchtier", repo, timeout_s=30, seed=7)
     assert run.result == "fail"
+
+def test_descendants_are_killed_on_timeout(repo):
+    marker_file = repo / "marker.txt"
+    run = run_tier("background", repo, timeout_s=0.5, seed=7)
+    assert run.result == "timeout"
+
+    # Capture size immediately after timeout
+    size_at_timeout = marker_file.stat().st_size if marker_file.exists() else 0
+
+    # Sleep to give any remaining descendants time to write more
+    time.sleep(0.5)
+
+    # Verify the file hasn't grown (descendant is dead)
+    size_after_sleep = marker_file.stat().st_size if marker_file.exists() else 0
+    assert size_after_sleep == size_at_timeout, \
+        f"Descendant process still running: {size_at_timeout} -> {size_after_sleep}"
