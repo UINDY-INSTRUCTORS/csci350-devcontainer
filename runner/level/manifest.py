@@ -50,6 +50,13 @@ def load_manifest(path: Path) -> Manifest:
     except (TypeError, ValueError) as exc:
         raise ManifestError(f"tiers: {exc}") from exc
 
+    if not tiers:
+        # An empty tiers list loads cleanly, compute_level falls straight
+        # through to `floor`, and every student silently gets the floor
+        # award (e.g. U) with a green exit — the exact spurious-failure
+        # mode this design exists to prevent, arriving via a typo.
+        raise ManifestError("tiers must not be empty")
+
     try:
         if not isinstance(raw["awards"], dict):
             raise TypeError(f"awards must be a mapping, got {type(raw['awards']).__name__}")
@@ -57,15 +64,15 @@ def load_manifest(path: Path) -> Manifest:
     except (TypeError, ValueError) as exc:
         raise ManifestError(f"awards: {exc}") from exc
 
-    unknown = [t for t in awards if t not in tiers]
+    unknown = sorted({str(t) for t in awards if t not in tiers})
     if unknown:
         raise ManifestError(f"awards names tier(s) not in tiers: {', '.join(unknown)}")
 
-    unawarded = [t for t in tiers if t not in awards]
+    unawarded = sorted({str(t) for t in tiers if t not in awards})
     if unawarded:
         raise ManifestError(f"tier(s) with no award: {', '.join(unawarded)}")
 
-    bad = sorted({v for v in [*awards.values(), raw["floor"]] if v not in LEVELS})
+    bad = sorted({str(v) for v in [*awards.values(), raw["floor"]] if v not in LEVELS})
     if bad:
         raise ManifestError(f"not a valid level: {', '.join(bad)}")
 
@@ -80,15 +87,16 @@ def load_manifest(path: Path) -> Manifest:
         raise ManifestError(f"timeout_s must be an integer: {exc}") from exc
 
     timeouts_dict = raw.get("timeouts") or {}
-    try:
-        timeouts = {}
-        for k, v in timeouts_dict.items():
-            try:
-                timeouts[str(k)] = int(v)
-            except (TypeError, ValueError) as exc:
-                raise ManifestError(f"timeouts[{k!r}] must be an integer: {exc}") from exc
-    except ManifestError:
-        raise
+    if not isinstance(timeouts_dict, dict):
+        raise ManifestError(
+            f"timeouts must be a mapping, got {type(timeouts_dict).__name__}"
+        )
+    timeouts = {}
+    for k, v in timeouts_dict.items():
+        try:
+            timeouts[str(k)] = int(v)
+        except (TypeError, ValueError) as exc:
+            raise ManifestError(f"timeouts[{k!r}] must be an integer: {exc}") from exc
 
     return Manifest(
         standard=str(raw["standard"]),

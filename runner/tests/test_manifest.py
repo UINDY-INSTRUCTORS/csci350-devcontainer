@@ -76,3 +76,27 @@ def test_rejects_timeout_value_not_integer(tmp_path):
     bad = GOOD.replace("timeouts: {prop: 600}", "timeouts: {prop: not_a_number}")
     with pytest.raises(ManifestError, match="timeouts"):
         load_manifest(write(tmp_path, bad))
+
+def test_rejects_timeouts_not_mapping(tmp_path):
+    bad = GOOD.replace("timeouts: {prop: 600}", "timeouts: [600]")
+    with pytest.raises(ManifestError, match="timeouts"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_non_string_award_value_without_crashing(tmp_path):
+    bad = GOOD.replace("awards: {smoke: U, parse: D, eval: S, prop: E}",
+                       "awards: {smoke: 1, parse: D, eval: S, prop: E}")
+    with pytest.raises(ManifestError, match="1"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_mixed_type_bad_levels_without_crashing(tmp_path):
+    bad = GOOD.replace("floor: U", "floor: A")
+    bad = bad.replace("awards: {smoke: U, parse: D, eval: S, prop: E}",
+                       "awards: {smoke: 1, parse: 2, eval: S, prop: E}")
+    with pytest.raises(ManifestError, match="A"):
+        load_manifest(write(tmp_path, bad))
+
+def test_rejects_empty_tiers(tmp_path):
+    bad = GOOD.replace("tiers:  [smoke, parse, eval, prop]", "tiers: []")
+    bad = bad.replace("awards: {smoke: U, parse: D, eval: S, prop: E}", "awards: {}")
+    with pytest.raises(ManifestError, match="tiers"):
+        load_manifest(write(tmp_path, bad))
