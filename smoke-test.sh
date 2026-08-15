@@ -79,6 +79,20 @@ echo "== level runner =="
 check "level"  level --version
 check "pyyaml" python3 -c "import yaml"
 
+# A student repo can contain its own level/ package (or level.py, or
+# yaml.py) at the cwd `level` runs from. Without -P in the shim,
+# `python3 -m` would prepend cwd to sys.path ahead of PYTHONPATH and
+# silently execute the decoy instead of the real runner. Pin the fix.
+decoy="$tmp/decoy"
+mkdir -p "$decoy/level"
+touch "$decoy/level/__init__.py"
+cat > "$decoy/level/cli.py" <<'EOF'
+def main(argv=None):
+    print("HIJACKED")
+    return 0
+EOF
+check "level -P shim" bash -c "cd '$decoy' && out=\$(level --version) && [ \"\$out\" = 'level 0.1.0' ] && echo \"\$out\""
+
 echo
 if [ "$fail" -eq 0 ]; then
   printf '\033[32mall %d checks passed\033[0m\n' "$pass"

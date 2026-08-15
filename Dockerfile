@@ -145,7 +145,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # student's Codespace can never disagree about what `make level` does.
 # See the vault note CSCI-350-Fall-2026-Plan §3a.
 COPY runner/level /opt/level/level
-RUN printf '#!/bin/sh\nPYTHONPATH=/opt/level exec python3 -m level.cli "$@"\n' > /usr/local/bin/level \
+# -P suppresses prepending the current working directory to sys.path[0].
+# Without it, `python3 -m level.cli` run with cwd inside a student's repo
+# would let a student-supplied level/ package (or level.py, or yaml.py)
+# shadow the runner ahead of PYTHONPATH — silently hijacking the grader
+# that grades them. Requires Python 3.11+; this image has 3.12.
+RUN printf '#!/bin/sh\nPYTHONPATH=/opt/level exec python3 -P -m level.cli "$@"\n' > /usr/local/bin/level \
     && chmod +x /usr/local/bin/level
 
 USER vscode
