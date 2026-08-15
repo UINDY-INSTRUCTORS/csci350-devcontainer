@@ -34,3 +34,27 @@ def test_out_flag_redirects_the_report(repo, tmp_path):
     out = tmp_path / "elsewhere.json"
     assert main(["--repo", str(repo), "--out", str(out)]) == 0
     assert json.loads(out.read_text())["standard"] == "S3"
+
+def test_tier_execution_failure_withholds_level(repo, monkeypatch, capsys):
+    import level.cli as cli_mod
+
+    def boom(*args, **kwargs):
+        raise OSError("make: command not found")
+
+    monkeypatch.setattr(cli_mod, "run_tier", boom)
+    assert main(["--repo", str(repo)]) == 1
+    data = json.loads((repo / "assessment.json").read_text())
+    assert data["status"] == "error"
+    assert "level" not in data
+    err = capsys.readouterr().err
+    assert err.startswith("level:")
+    assert "Traceback" not in err
+
+def test_out_directory_missing_is_harness_error(repo, tmp_path, capsys):
+    out = tmp_path / "nowhere" / "assessment.json"
+    assert main(["--repo", str(repo), "--out", str(out)]) == 1
+    assert not out.exists()
+    err = capsys.readouterr().err
+    assert err.startswith("level:")
+    assert str(out) in err
+    assert "Traceback" not in err

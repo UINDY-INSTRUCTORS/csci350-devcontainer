@@ -8,7 +8,7 @@ from pathlib import Path
 from . import __version__
 from .manifest import ManifestError, load_manifest
 from .report import build_report, write_report
-from .tiers import run_tier
+from .tiers import TierRun, run_tier
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,13 +30,27 @@ def main(argv: list[str] | None = None) -> int:
         print(f"level: {exc}", file=sys.stderr)
         return 1
 
-    runs = [
-        run_tier(tier, repo, manifest.timeout_for(tier), manifest.seed)
-        for tier in manifest.tiers
-    ]
+    runs: list[TierRun] = []
+    status = "ok"
+    for tier in manifest.tiers:
+        try:
+            runs.append(run_tier(tier, repo, manifest.timeout_for(tier), manifest.seed))
+        except OSError as exc:
+            print(f"level: could not run tier {tier!r}: {exc}", file=sys.stderr)
+            status = "error"
+            break
 
-    report = build_report(manifest, runs)
-    write_report(report, out)
+    report = build_report(manifest, runs, status=status)
+
+    try:
+        write_report(report, out)
+    except OSError as exc:
+        print(f"level: could not write report to {out}: {exc}", file=sys.stderr)
+        return 1
+
+    if status == "error":
+        return 1
+
     print(f"level: {report['level']}  ({out})")
     return 0
 
