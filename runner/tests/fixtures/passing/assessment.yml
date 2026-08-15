@@ -1,0 +1,6 @@
+standard: S3
+seed: 20260929
+floor: U
+timeout_s: 60
+tiers:  [smoke, parse, eval, prop]
+awards: {smoke: U, parse: D, eval: S, prop: E}
