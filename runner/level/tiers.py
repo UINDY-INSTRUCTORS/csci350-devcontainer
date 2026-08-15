@@ -17,6 +17,25 @@ class TierRun:
     output: str
 
 
+# A tier is untrusted student code (e.g. a left-recursive parser looping on
+# printf inside its timeout budget). communicate() accumulates everything
+# a tier prints into memory, and it all lands in assessment.json, so the
+# per-tier timeout bounds time but not bytes on its own — cap output size
+# too. Keep the first half (build header) and the last half (where
+# diagnostics usually are) with a clear elision marker between them.
+OUTPUT_CAP = 64 * 1024
+OUTPUT_HALF = OUTPUT_CAP // 2
+TRUNCATION_MARKER = "\n\n... [level: output truncated, {omitted} chars omitted] ...\n\n"
+
+
+def _truncate(output: str) -> str:
+    if len(output) <= OUTPUT_CAP:
+        return output
+    omitted = len(output) - OUTPUT_CAP
+    marker = TRUNCATION_MARKER.format(omitted=omitted)
+    return output[:OUTPUT_HALF] + marker + output[-OUTPUT_HALF:]
+
+
 def run_tier(name: str, repo: Path, timeout_s: int, seed: int) -> TierRun:
     env = {**os.environ, "LEVEL_SEED": str(seed)}
     started = time.monotonic()
@@ -38,8 +57,9 @@ def run_tier(name: str, repo: Path, timeout_s: int, seed: int) -> TierRun:
         # Kill the entire process group to clean up descendants
         try:
             os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        except (OSError, ProcessLookupError):
-            # Process group already dead
+        except OSError:
+            # Process group already dead (ProcessLookupError is a subclass
+            # of OSError, so a single except covers it)
             pass
         # Drain remaining output
         output, _ = proc.communicate()
@@ -47,12 +67,12 @@ def run_tier(name: str, repo: Path, timeout_s: int, seed: int) -> TierRun:
             name=name,
             result="timeout",
             duration_s=time.monotonic() - started,
-            output=f"{output}\n[level] tier timed out after {timeout_s}s",
+            output=f"{_truncate(output)}\n[level] tier timed out after {timeout_s}s",
         )
 
     return TierRun(
         name=name,
         result="pass" if proc.returncode == 0 else "fail",
         duration_s=time.monotonic() - started,
-        output=output,
+        output=_truncate(output),
     )

@@ -2,12 +2,12 @@ import shutil
 import pytest
 import time
 from pathlib import Path
-from level.tiers import run_tier
+from level.tiers import OUTPUT_CAP, run_tier
 
 pytestmark = pytest.mark.skipif(shutil.which("make") is None, reason="make not installed")
 
 MAKEFILE = """\
-.PHONY: test-ok test-bad test-slow test-seed test-background test-badbytes
+.PHONY: test-ok test-bad test-slow test-seed test-background test-badbytes test-huge
 test-ok:
 \t@echo tier ran
 test-bad:
@@ -20,6 +20,8 @@ test-background:
 \t@sh -c 'while true; do echo x >> marker.txt; sleep 0.1; done'
 test-badbytes:
 \t@printf 'before\\377after\\n'
+test-huge:
+\t@yes A | head -c 200000
 """
 
 @pytest.fixture
@@ -61,6 +63,20 @@ def test_non_utf8_output_does_not_crash_the_harness(repo):
     assert "before" in run.output
     assert "after" in run.output
     assert "�" in run.output
+
+def test_output_over_cap_is_truncated_with_marker(repo):
+    run = run_tier("huge", repo, timeout_s=30, seed=7)
+    assert run.result == "pass"
+    assert len(run.output) < 200_000
+    assert len(run.output) <= OUTPUT_CAP + 200  # cap plus marker overhead
+    assert "truncated" in run.output
+    assert run.output.startswith("A")
+    assert run.output.rstrip("\n").endswith("A")
+
+def test_output_under_cap_is_unaffected(repo):
+    run = run_tier("ok", repo, timeout_s=30, seed=7)
+    assert "truncated" not in run.output
+    assert run.output == "tier ran\n"
 
 def test_descendants_are_killed_on_timeout(repo):
     marker_file = repo / "marker.txt"
