@@ -24,6 +24,21 @@ def test_stops_at_first_failure():
 def test_first_tier_failing_gives_floor():
     assert compute_level(M, results(smoke="fail")) == "U"
 
+def test_first_tier_failing_gives_floor_not_first_award():
+    # floor and awards[tiers[0]] are separate keys by design (a later lab
+    # tier set may want them to differ) — this manifest sets them to
+    # different values, so a first-tier failure must yield floor ("D"),
+    # not awards["smoke"] ("S").
+    m = Manifest(
+        standard="S3", seed=1, floor="D",
+        tiers=("smoke", "parse", "eval", "prop"),
+        awards={"smoke": "S", "parse": "D", "eval": "S", "prop": "E"},
+        timeout_s=120, timeouts={},
+    )
+    base = {t: "pass" for t in m.tiers}
+    base["smoke"] = "fail"
+    assert compute_level(m, base) == "D"
+
 def test_later_pass_cannot_jump_a_failed_gate():
     # prop passes but eval failed — eval gated, so S3 is D, not E
     assert compute_level(M, results(eval="fail", prop="pass")) == "D"
