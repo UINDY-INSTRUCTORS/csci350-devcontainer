@@ -75,6 +75,11 @@ echo 'print("python ok")' > "$tmp/t.py"
 check "python run" python3 "$tmp/t.py"
 
 echo
+echo "--- level runner ---"
+level --version || { echo "FAIL: level not on PATH"; exit 1; }
+python3 -c "import yaml" || { echo "FAIL: PyYAML missing"; exit 1; }
+
+echo
 if [ "$fail" -eq 0 ]; then
   printf '\033[32mall %d checks passed\033[0m\n' "$pass"
 else
