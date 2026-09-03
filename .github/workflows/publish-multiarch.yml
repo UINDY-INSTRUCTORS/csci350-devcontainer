@@ -65,6 +65,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR rejects a mixed-case repository name, and github.repository_owner is
+      # "UINDY-INSTRUCTORS". publish.yml never trips on this because
+      # docker/metadata-action lowercases for you; pushing by digest bypasses
+      # metadata-action, so it has to be done explicitly.
+      - name: Lowercase the image reference
+        id: img
+        run: echo "ref=${REGISTRY}/${IMAGE,,}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE: ${{ env.IMAGE }}
+
       # Pushed by digest, with no tag. The merge job below assembles the tag
       # from both digests, so neither leg is ever briefly visible as the tag.
       - id: build
@@ -72,7 +83,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ steps.img.outputs.ref }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
 
@@ -80,7 +91,7 @@ jobs:
       # cannot actually start Racket fails here rather than in front of a class.
       - name: Smoke test this architecture
         run: |
-          REF="${{ env.REGISTRY }}/${{ env.IMAGE }}@${{ steps.build.outputs.digest }}"
+          REF="${{ steps.img.outputs.ref }}@${{ steps.build.outputs.digest }}"
           echo "Testing $REF on $(uname -m)"
           docker run --rm "$REF" smoke-test
 
@@ -122,14 +133,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # GHCR rejects a mixed-case repository name, and github.repository_owner is
+      # "UINDY-INSTRUCTORS". publish.yml never trips on this because
+      # docker/metadata-action lowercases for you; pushing by digest bypasses
+      # metadata-action, so it has to be done explicitly.
+      - name: Lowercase the image reference
+        id: img
+        run: echo "ref=${REGISTRY}/${IMAGE,,}" >> "$GITHUB_OUTPUT"
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          IMAGE: ${{ env.IMAGE }}
+
       - name: Create the manifest list
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create \
-            -t "${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ inputs.tag }}" \
-            $(printf "${{ env.REGISTRY }}/${{ env.IMAGE }}@sha256:%s " *)
+            -t "${{ steps.img.outputs.ref }}:${{ inputs.tag }}" \
+            $(printf "${{ steps.img.outputs.ref }}@sha256:%s " *)
 
       - name: Show what was published
         run: |
           docker buildx imagetools inspect \
-            "${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ inputs.tag }}"
+            "${{ steps.img.outputs.ref }}:${{ inputs.tag }}"
