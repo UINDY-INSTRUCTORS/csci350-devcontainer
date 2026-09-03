@@ -123,8 +123,15 @@ strategy:
 ```
 …then `docker buildx imagetools create` to combine the digests.
 
-Worth doing only if local Apple Silicon development becomes a real need.
-Codespaces is amd64, so nothing student-facing depends on it.
+✅ **Done 2026-09-03** — implemented in `.github/workflows/publish-multiarch.yml`,
+after local Apple Silicon development did become a real need: `docker pull` of
+`:fa26` on an M-series Mac fails with
+
+    no matching manifest for linux/arm64/v8 in the manifest list entries
+
+That workflow is **manual-only** and defaults to tag `fa26b`, so it cannot
+disturb `:fa26`. `publish.yml` is untouched and remains the amd64 path.
+Codespaces is amd64, so nothing student-facing depends on the arm64 leg.
 
 **Make the package public** — students are added by `gh rba` as *outside
 collaborators*, not org members, so a private package would fail to pull and the
