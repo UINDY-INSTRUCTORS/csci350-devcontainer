@@ -8,7 +8,7 @@
 // templates explicitly if the toolchain has to move during the term.
 {
   "name": "CSCI-350",
-  "image": "ghcr.io/uindy-instructors/csci350:fa26",
+  "image": "ghcr.io/uindy-instructors/csci350:fa26b",
   "customizations": {
     "vscode": {
       "extensions": [
