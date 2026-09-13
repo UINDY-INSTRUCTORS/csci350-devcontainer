@@ -11,17 +11,24 @@ name: Publish course image
 # amd64 is what Codespaces runs, so this covers the deployment target.
 # To add arm64 later, build it on a NATIVE arm64 runner and merge manifests —
 # see "Adding arm64" in the README. Do not just add it to `platforms:`.
+#
+# WHY THIS IS MANUAL-ONLY
+#
+# It used to run on every push to main, with the image tag defaulting to
+# 'fa26'. That tag is pinned by live assignment templates, so an ordinary
+# merge republished the image students were mid-way through — three times
+# (2026-09-03, -09-12, -09-13) before anyone noticed, the last of which moved
+# :fa26 while a lab was open.
+#
+# Publishing is now a deliberate act: dispatch it, and name the tag yourself.
+# There is no default, so the tag cannot be chosen by inattention.
 
 on:
-  push:
-    branches: [main]
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Image tag to publish (e.g. fa26)'
+        description: 'Image tag to publish (NOT fa26 — that is pinned by live templates)'
         required: true
-        default: 'fa26'
 
 env:
   REGISTRY: ghcr.io
@@ -50,8 +57,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
           tags: |
-            type=raw,value=${{ github.event.inputs.tag || 'fa26' }}
-            type=ref,event=tag
+            type=raw,value=${{ inputs.tag }}
             type=sha,format=short
 
       - id: build
