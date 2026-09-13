@@ -34,6 +34,7 @@ check cabal     cabal --version
 check hls       haskell-language-server-wrapper --version
 check python    python3 --version
 check pytest    pytest --version
+check lark      python3 -c 'import lark; print("lark", lark.__version__)'
 
 echo
 echo "== junit jar =="

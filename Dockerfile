@@ -70,7 +70,13 @@ ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-${TARGETARCH}
 
 # Ubuntu 24.04 marks the system Python externally-managed (PEP 668).
 # These are course tools, not system libs, so overriding is the pragmatic call.
-RUN pip3 install --no-cache-dir --break-system-packages pytest
+#
+# lark is the parser behind the week-3 grammar checker: students write BNF in
+# the book's notation and it reports whether a string parses, how many trees it
+# gets, and what shape they are. Baking it in means the lab needs no
+# requirements.txt and no install step at Codespace start — and no student hits
+# this same PEP 668 error themselves.
+RUN pip3 install --no-cache-dir --break-system-packages pytest lark
 
 # ---------------------------------------------------------------------------
 # 2. JUnit console standalone
