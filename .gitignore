@@ -5,3 +5,4 @@ dist-newstyle/
 .stack-work/
 compiled/
 __pycache__/
+.worktrees/
